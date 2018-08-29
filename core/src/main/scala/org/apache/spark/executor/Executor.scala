@@ -100,6 +100,8 @@ private[spark] class Executor(
       .build()
     Executors.newCachedThreadPool(threadFactory).asInstanceOf[ThreadPoolExecutor]
   }
+
+  // 创建并构建ExecutorSource, executorSource用于测量系统
   private val executorSource = new ExecutorSource(threadPool, executorId)
   // Pool used for threads that supervise task killing / cancellation
   private val taskReaperPool = ThreadUtils.newDaemonCachedThreadPool("Task reaper")
@@ -166,6 +168,7 @@ private[spark] class Executor(
    */
   private var heartbeatFailures = 0
 
+  // 启动Executor的心跳线程
   startDriverHeartbeater()
 
   private[executor] def numRunningTasks: Int = runningTasks.size()
@@ -733,6 +736,7 @@ private[spark] class Executor(
       }
     }
 
+    // 真正的报告心跳
     val message = Heartbeat(executorId, accumUpdates.toArray, env.blockManager.blockManagerId)
     try {
       val response = heartbeatReceiverRef.askSync[HeartbeatResponse](

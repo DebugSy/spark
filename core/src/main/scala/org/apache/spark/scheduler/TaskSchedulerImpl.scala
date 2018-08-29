@@ -77,6 +77,7 @@ private[spark] class TaskSchedulerImpl private[scheduler](
 
   val conf = sc.conf
 
+  // 多久检查一次推测任务
   // How often to check for speculative tasks
   val SPECULATION_INTERVAL_MS = conf.getTimeAsMs("spark.speculation.interval", "100ms")
 

@@ -24,6 +24,7 @@ private[spark] object RpcUtils {
 
   /**
    * Retrieve a `RpcEndpointRef` which is located in the driver via its name.
+   * 这里需要先获得spark.driver host 和 port ?
    */
   def makeDriverRef(name: String, conf: SparkConf, rpcEnv: RpcEnv): RpcEndpointRef = {
     val driverHost: String = conf.get("spark.driver.host", "localhost")

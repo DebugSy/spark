@@ -463,11 +463,13 @@ class SparkContext(config: SparkConf) extends Logging {
     // hadoop配置信息
     _hadoopConfiguration = SparkHadoopUtil.get.newConfiguration(_conf)
 
+    // 如果设置了spark.jars则会调用
     // Add each JAR given through the constructor
     if (jars != null) {
       jars.foreach(addJar)
     }
 
+    // spark.files指定
     if (files != null) {
       files.foreach(addFile)
     }
@@ -541,7 +543,7 @@ class SparkContext(config: SparkConf) extends Logging {
         None
       }
 
-    //创建和启动Executor分配管理器
+    // 创建和启动Executor分配管理器
     // Optionally scale number of executors dynamically based on workload. Exposed for testing.
     val dynamicAllocationEnabled = Utils.isDynamicAllocationEnabled(_conf)
     _executorAllocationManager =
@@ -558,6 +560,7 @@ class SparkContext(config: SparkConf) extends Logging {
       }
     _executorAllocationManager.foreach(_.start())
 
+    // ContextClear的创建与启动：用于清理超出应用范围的RDD,ShuffleDependency和Broadcast对象
     _cleaner =
       if (_conf.getBoolean("spark.cleaner.referenceTracking", true)) {
         Some(new ContextCleaner(this))
@@ -566,12 +569,16 @@ class SparkContext(config: SparkConf) extends Logging {
       }
     _cleaner.foreach(_.start())
 
+    // 设置外部监听
     setupAndStartListenerBus()
+    // Spark环境更新
     postEnvironmentUpdate()
     postApplicationStart()
 
+    //为了等待Backend就绪
     // Post init
     _taskScheduler.postStartHook()
+
     _env.metricsSystem.registerSource(_dagScheduler.metricsSource)
     _env.metricsSystem.registerSource(new BlockManagerSource(_env.blockManager))
     _executorAllocationManager.foreach { e =>
@@ -2432,6 +2439,7 @@ class SparkContext(config: SparkConf) extends Logging {
     }
   }
 
+  // SparkContext初始化的最后将SparkContext的状态从contextBeingConstructed(正在构建中)改为activeContext(已激活)
   // In order to prevent multiple SparkContexts from being active at the same time, mark this
   // context as having finished construction.
   // NOTE: this must be placed at the end of the SparkContext constructor.

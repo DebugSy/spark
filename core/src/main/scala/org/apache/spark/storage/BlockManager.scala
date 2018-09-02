@@ -124,6 +124,7 @@ private[spark] class BlockManager(
   private[spark] val externalShuffleServiceEnabled =
     conf.getBoolean("spark.shuffle.service.enabled", false)
 
+  // 磁盘块管理器
   val diskBlockManager = {
     // Only perform cleanup if an external service is not serving our shuffle files.
     val deleteFilesOnStop =
@@ -131,15 +132,19 @@ private[spark] class BlockManager(
     new DiskBlockManager(conf, deleteFilesOnStop)
   }
 
+  // 用于blockManager缓存BlockId及对应的BlockInfo
   // Visible for testing
   private[storage] val blockInfoManager = new BlockInfoManager
 
   private val futureExecutionContext = ExecutionContext.fromExecutorService(
     ThreadUtils.newDaemonCachedThreadPool("block-manager-future", 128))
 
+  // 内存存储
   // Actual storage of where blocks are kept
   private[spark] val memoryStore =
     new MemoryStore(conf, blockInfoManager, serializerManager, memoryManager, this)
+
+  //磁盘存储
   private[spark] val diskStore = new DiskStore(conf, diskBlockManager, securityManager)
   memoryManager.setMemoryStore(memoryStore)
 
@@ -170,6 +175,7 @@ private[spark] class BlockManager(
   // service, or just our own Executor's BlockManager.
   private[spark] var shuffleServerId: BlockManagerId = _
 
+  // shuffle客户端
   // Client to read other executors' shuffle files. This is either an external service, or just the
   // standard BlockTransferService to directly connect to other Executors.
   private[spark] val shuffleClient = if (externalShuffleServiceEnabled) {

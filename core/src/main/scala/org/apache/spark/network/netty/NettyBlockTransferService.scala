@@ -59,6 +59,7 @@ private[spark] class NettyBlockTransferService(
   private[this] var appId: String = _
 
   override def init(blockDataManager: BlockDataManager): Unit = {
+    // 1. 创建RpcServer
     val rpcHandler = new NettyBlockRpcServer(conf.getAppId, serializer, blockDataManager)
     var serverBootstrap: Option[TransportServerBootstrap] = None
     var clientBootstrap: Option[TransportClientBootstrap] = None
@@ -66,8 +67,13 @@ private[spark] class NettyBlockTransferService(
       serverBootstrap = Some(new AuthServerBootstrap(transportConf, securityManager))
       clientBootstrap = Some(new AuthClientBootstrap(transportConf, conf.getAppId, securityManager))
     }
+    // 2. 构造transportContext
     transportContext = new TransportContext(transportConf, rpcHandler)
+
+    // 3. 创建RPC客户端工厂clientFactory
     clientFactory = transportContext.createClientFactory(clientBootstrap.toSeq.asJava)
+
+    // 4. 创建Netty服务器TransportServer
     server = createServer(serverBootstrap.toList)
     appId = conf.getAppId
     logInfo(s"Server created on ${hostName}:${server.getPort}")
@@ -83,6 +89,7 @@ private[spark] class NettyBlockTransferService(
     Utils.startServiceOnPort(_port, startService, conf, getClass.getName)._1
   }
 
+  // 用于获取远程shuffle文件
   override def fetchBlocks(
       host: String,
       port: Int,
@@ -117,6 +124,7 @@ private[spark] class NettyBlockTransferService(
 
   override def port: Int = server.getPort
 
+  // 上传shuffle文件
   override def uploadBlock(
       hostname: String,
       port: Int,
@@ -126,15 +134,21 @@ private[spark] class NettyBlockTransferService(
       level: StorageLevel,
       classTag: ClassTag[_]): Future[Unit] = {
     val result = Promise[Unit]()
+
+    //创建Netty服务的客户端
     val client = clientFactory.createClient(hostname, port)
 
+    // 将Block的存储级别StorageLevel序列化
     // StorageLevel and ClassTag are serialized as bytes using our JavaSerializer.
     // Everything else is encoded using our binary protocol.
     val metadata = JavaUtils.bufferToArray(serializer.newInstance().serialize((level, classTag)))
 
+    // 将Block的ByteBuffer转化为数组，便于序列化
     // Convert or copy nio buffer into array in order to serialize it.
     val array = JavaUtils.bufferToArray(blockData.nioByteBuffer())
 
+    //将appId,execId,blockId,序列化的StorageLevel，转化为数组的Block封装为UploadBlock，并将UploadBlock序列化为字节数组
+    // 最终调用netty客户端的sendRpc方法将字节数组上传，回调函数RpcResponseCallback根据RPC的结果更改上传的状态
     client.sendRpc(new UploadBlock(appId, execId, blockId.toString, metadata, array).toByteBuffer,
       new RpcResponseCallback {
         override def onSuccess(response: ByteBuffer): Unit = {

@@ -44,12 +44,15 @@ class BlockManagerMasterEndpoint(
     listenerBus: LiveListenerBus)
   extends ThreadSafeRpcEndpoint with Logging {
 
+  // 缓存所有的BlockManagerId及其BlockManager的信息
   // Mapping from block manager id to the block manager's information.
   private val blockManagerInfo = new mutable.HashMap[BlockManagerId, BlockManagerInfo]
 
+  // 缓存ExecutorId及其拥有的BlockManagerId之间的映射关系
   // Mapping from executor ID to block manager ID.
   private val blockManagerIdByExecutor = new mutable.HashMap[String, BlockManagerId]
 
+  // 缓存Block与BlockManagerId的映射关系
   // Mapping from block id to the set of block managers that have the block.
   private val blockLocations = new JHashMap[BlockId, mutable.HashSet[BlockManagerId]]
 

@@ -120,6 +120,8 @@ public class TransportServer implements Closeable {
         for (TransportServerBootstrap bootstrap : bootstraps) {
           rpcHandler = bootstrap.doBootstrap(ch, rpcHandler);
         }
+
+        //调用TransportContext的initializePipeline方法
         context.initializePipeline(ch, rpcHandler);
       }
     });

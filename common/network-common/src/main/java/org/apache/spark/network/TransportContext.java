@@ -143,7 +143,9 @@ public class TransportContext {
       SocketChannel channel,
       RpcHandler channelRpcHandler) {
     try {
+        // 创建channelHandler，
       TransportChannelHandler channelHandler = createChannelHandler(channel, channelRpcHandler);
+        // 并绑定到SocketChannel
       channel.pipeline()
         .addLast("encoder", ENCODER)
         .addLast(TransportFrameDecoder.HANDLER_NAME, NettyUtils.createFrameDecoder())
